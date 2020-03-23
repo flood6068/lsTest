@@ -1,10 +1,31 @@
 MODULE HockeyStats;
 // описание логики : https://documentation.lsfusion.org/pages/viewpage.action?pageId=2228240
-REQUIRE System;
+REQUIRE MasterData, System;
 
 CLASS Team 'Команда';
 
-name 'Название команды' = DATA STRING[30] (Team) IN base;
+name 'Название команды' = DATA STRING[30] (Team) IN base NONULL ;
+CONSTRAINT NOT name(Team t) AND t IS Team MESSAGE 'Название команды должно быть заполнено';
+teamIndex 'Номер' (Team o) = PARTITION SUM 1 IF o IS Team ORDER o CHARWIDTH 6 NOFLEX ;
+
+
+CLASS Player 'Игрок';
+
+firstname 'Имя' = DATA STRING[30] (Player) IN base NONULL ;
+CONSTRAINT NOT firstname(Player f) AND f IS Player MESSAGE 'Имя игрока должно быть заполнено';
+lastname 'Фамилия' = DATA STRING[30] (Player) IN base NONULL ;
+CONSTRAINT NOT lastname (Player l) AND l IS Player MESSAGE 'Фамилия игрока должна быть заполнена';
+playerTeam =  DATA Team (Player) NONULL ;
+playerIndex 'Номер' (Player p) = PARTITION SUM 1 IF p IS Player ORDER p CHARWIDTH 6 NOFLEX ;
+playerTeamName 'Команда игрока'(Player player) = name(playerTeam(player)); //Должна быть ссылка на команду для игрока
+
+//CLASS GoalAuthor 'Авторы голов';
+
+//goalAuthor = DATA Player(Player) NONULL ;
+//goalAuthorGame = DATA Game(Game) NONULL;
+//goalAuthorTeam = DATA Team()NONULL;
+//goalAuthorName 'Автор гола' (Player player) = firstname(player);
+//goalAuthorTeam ;
 
 CLASS Game 'Игра';
 
@@ -98,7 +119,34 @@ FORM MainFormSingle 'Турнирная таблица'
                      gamesLostSO, gamesLostOT, gamesLost, goalsScored, goalsConceded, points, NEW, DELETE
     ORDER place(team)
 ;
+FORM Teams 'Команды'
+    OBJECTS team = Team
+    PROPERTIES (team) teamIndex, name, NEW , EDIT , DELETE 
+    ORDER teamIndex(team)
+    ;
+
+FORM addTeam 'Добавить команду';
+
+FORM addPlayer 'Добавить игрока';
+
+FORM Players 'Игроки'
+    OBJECTS player = Player
+    PROPERTIES (player) playerIndex, firstname, lastname, playerTeamName, NEW, EDIT, DELETE
+    ORDER playerIndex(player)
+;
+
+FORM TopPlayers 'Бомбардиры'
+OBJECTS topPlayer = Game
+//PROPERTIES (topPlayer) goalsAuthors, , NEW, EDIT, DELETE 
+;
 
 NAVIGATOR {
+    masterData{
+            NEW FOLDER References 'Турнирные справочники' {
+                NEW Teams FIRST;
+                NEW Players FIRST;
+            }
+        }
     NEW MainForm FIRST;
+    NEW TopPlayers AFTER MainForm;
 }

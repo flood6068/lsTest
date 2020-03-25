@@ -13,19 +13,17 @@ CLASS Player 'Игрок';
 
 firstname 'Имя' = DATA STRING[30] (Player) IN base NONULL ;
 CONSTRAINT NOT firstname(Player f) AND f IS Player MESSAGE 'Имя игрока должно быть заполнено';
+middlename 'Отчество' = DATA STRING[30] (Player) IN base NONULL ;
+CONSTRAINT NOT middlename(Player m) AND m IS Player MESSAGE 'Отчество игрока должно быть заполнено';
 lastname 'Фамилия' = DATA STRING[30] (Player) IN base NONULL ;
 CONSTRAINT NOT lastname (Player l) AND l IS Player MESSAGE 'Фамилия игрока должна быть заполнена';
 playerTeam =  DATA Team (Player) NONULL ;
 playerIndex 'Номер' (Player p) = PARTITION SUM 1 IF p IS Player ORDER p CHARWIDTH 6 NOFLEX ;
-playerTeamName 'Команда игрока'(Player player) = name(playerTeam(player)); //Должна быть ссылка на команду для игрока
+playerTeamName 'Команда игрока'(Player player) = name(playerTeam(player)); //Cсылка на команду для игрока
+fio 'ФИО'(Player p) = CONCAT ' ', firstname(p), middlename(p), lastname(p); //Объединение фамилии имени и отчества
+playerTeamNumber 'Номер игрока в команде' (Player p)= DATA INTEGER (Player) IN base NONULL;
+CONSTRAINT playerTeamNumber (Player p) > 21 MESSAGE 'В команде бывает до 21 игрока';
 
-//CLASS GoalAuthor 'Авторы голов';
-
-//goalAuthor = DATA Player(Player) NONULL ;
-//goalAuthorGame = DATA Game(Game) NONULL;
-//goalAuthorTeam = DATA Team()NONULL;
-//goalAuthorName 'Автор гола' (Player player) = firstname(player);
-//goalAuthorTeam ;
 
 CLASS Game 'Игра';
 
@@ -34,13 +32,38 @@ hostTeam = DATA Team (Game);
 guestTeam = DATA Team (Game);
 hostTeamName 'Хозяева' (Game game) = name(hostTeam(game));
 guestTeamName 'Гости' (Game game) = name(guestTeam(game));
+match 'Матч' (Game game) = CONCAT '<>', hostTeamName(game), guestTeamName(game);
 
 CONSTRAINT hostTeam(Game team) = guestTeam(team) CHECKED BY hostTeam, guestTeam MESSAGE 'Хозяйская и гостевая команды должны быть разными';
+
+
 
 hostGoals 'Х голы' = DATA INTEGER (Game);
 guestGoals 'Г голы' = DATA INTEGER (Game);
 
 CONSTRAINT hostGoals(Game game) = guestGoals(game) MESSAGE 'Игра не может закончиться вничью';
+
+CLASS Goal 'Голы';
+goalAuthor = DATA Player(Goal);
+goalAuthorName 'Автор Гола' (Goal goal) = fio(goalAuthor(goal)) NONULL ;
+goalTime 'Вермя гола' = DATA TIME (Goal) IN base NONULL;
+CONSTRAINT goalTime (Goal goal) > 00:20 OR goalTime(goal) < 00:00 MESSAGE 'Период длится 20 минут';
+goalMatch = DATA Game(Goal);
+goalMatchName 'Матч' (Goal game) = match(goalMatch(game)) NONULL ;
+goalPeriod = DATA Period(Goal);
+goalPeriodName 'Период' (Goal period) = staticCaption(goalPeriod(period)) NONULL ;
+
+CONSTRAINT playerTeam(goalAuthor(Goal game)) != hostTeam(goalMatch(game)) CHECKED BY hostTeam, guestTeam MESSAGE 'Игрок не играл в этом матче';
+
+CLASS Period 'Период'{
+    first '1',
+    second '2',
+    third '3',
+    overtime 'Овертайм',
+    bullet 'Буллит'
+}
+
+goalQuantity 'Забитые голы'(Player p) = GROUP SUM 1 BY goalAuthor(Goal goal);
 
 winner(Game game) = IF hostGoals(game) > guestGoals(game)
                     THEN hostTeam(game)
@@ -119,25 +142,99 @@ FORM MainFormSingle 'Турнирная таблица'
                      gamesLostSO, gamesLostOT, gamesLost, goalsScored, goalsConceded, points, NEW, DELETE
     ORDER place(team)
 ;
+
 FORM Teams 'Команды'
     OBJECTS team = Team
-    PROPERTIES (team) teamIndex, name, NEW , EDIT , DELETE 
+    PROPERTIES (team) teamIndex, name, place
+    PROPERTIES (team) NEWSESSION NEW , EDIT , DELETE 
     ORDER teamIndex(team)
-    ;
-
-FORM addTeam 'Добавить команду';
-
-FORM addPlayer 'Добавить игрока';
-
-FORM Players 'Игроки'
+    
     OBJECTS player = Player
-    PROPERTIES (player) playerIndex, firstname, lastname, playerTeamName, NEW, EDIT, DELETE
-    ORDER playerIndex(player)
+    PROPERTIES (player) playerTeamNumber, fio, goalQuantity READONLY 
+    FILTERS playerTeam(player) = team
+    ORDER playerTeamNumber (player)
+    ;
+    
+DESIGN Teams {
+    NEW TeamsDesign {
+        fill = 1; // указываем, что контейнер должен занимать все доступное ему место
+        type = SPLITV; // указываем, что контейнер будет вертикальным сплиттером
+        MOVE BOX (team);
+        MOVE BOX (player);
+     } 
+}
 ;
 
+FORM PlayersEdit 'Редактирование игрока'
+    OBJECTS  player = Player PANEL 
+    PROPERTIES (player) playerIndex, firstname, middlename, lastname, playerTeamNumber, playerTeamName
+    ORDER playerIndex(player)
+    EDIT Player OBJECT player
+;
+FORM GamesEdit 'Игры'
+    OBJECTS game = Game
+    PROPERTIES (game) date, match
+    PROPERTIES (game) NEWSESSION NEW, EDIT, DELETE
+    ORDER date(game)
+ 
+    LIST Game OBJECT game
+;
+
+DESIGN GamesEdit{
+    NEW GamesEdit{
+        REMOVE TOOLBARSYSTEM (game);
+        REMOVE TOOLBARRIGHT (game);
+        REMOVE PROPERTY (formRefresh());
+        REMOVE PROPERTY (formDrop());
+    }
+}
+FORM Players 'Игроки'
+    OBJECTS player = Player
+    PROPERTIES (player) playerIndex, fio, goalQuantity, playerTeamName
+    PROPERTIES (player) NEWSESSION NEW, EDIT, DELETE
+    ORDER playerIndex(player)
+    
+    OBJECTS goal = Goal
+    PROPERTIES (goal) goalMatchName, goalPeriodName, goalTime READONLY 
+    FILTERS goalAuthor(goal) = player
+;
+FORM GoalsEdit 'Ввод голов'
+    OBJECTS goal = Goal PANEL 
+    PROPERTIES (goal) goalAuthorName, goalMatchName, goalPeriodName, goalTime
+    ORDER goalTime(goal)
+    EDIT Goal OBJECT goal
+    LIST Goal OBJECT goal
+;
+FORM Goals 'Голы'
+    OBJECTS game = Game
+    PROPERTIES (game) match, hostGoals, guestGoals READONLY 
+    
+    OBJECTS goal = Goal
+    PROPERTIES (goal) goalAuthorName, goalPeriodName READONLY , goalTime 
+    PROPERTIES (goal) NEWSESSION NEW, EDIT , DELETE 
+    ORDER goalTime(goal)
+    FILTERS goalMatch(goal) = game
+;
+FORM Period 'Период'
+    OBJECTS period = Period
+    PROPERTIES (period) staticCaption READONLY
+    ORDER staticCaption(period)
+    EDIT Period OBJECT period
+    LIST Period OBJECT period
+;
+
+DESIGN Period {
+    NEW PeriodDesign {
+    caption = 'Период';
+    REMOVE TOOLBARSYSTEM (period);
+    REMOVE PROPERTY (formRefresh());
+    REMOVE PROPERTY (formDrop());
+    }
+}
 FORM TopPlayers 'Бомбардиры'
-OBJECTS topPlayer = Game
-//PROPERTIES (topPlayer) goalsAuthors, , NEW, EDIT, DELETE 
+    OBJECTS player = Player
+    PROPERTIES (player) goalQuantity, fio
+    ORDER goalQuantity(player)
 ;
 
 NAVIGATOR {
@@ -148,5 +245,6 @@ NAVIGATOR {
             }
         }
     NEW MainForm FIRST;
-    NEW TopPlayers AFTER MainForm;
+    NEW Goals AFTER MainForm;
+    NEW TopPlayers AFTER  Goals;
 }

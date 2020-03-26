@@ -153,6 +153,7 @@ FORM Teams 'Команды'
     PROPERTIES (player) playerTeamNumber, fio, goalQuantity READONLY 
     FILTERS playerTeam(player) = team
     ORDER playerTeamNumber (player)
+    
     ;
     
 DESIGN Teams {
@@ -234,7 +235,11 @@ DESIGN Period {
 FORM TopPlayers 'Бомбардиры'
     OBJECTS player = Player
     PROPERTIES (player) goalQuantity, fio
-    ORDER goalQuantity(player)
+    ORDER goalQuantity(player) DESC
+    
+    OBJECTS goal = Goal
+    PROPERTIES (goal) goalMatchName, goalPeriodName, goalTime
+    FILTERS goalAuthor(goal) = player
 ;
 
 NAVIGATOR {

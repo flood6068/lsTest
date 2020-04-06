@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Голы" pageWidth="842" pageHeight="595" orientation="Landscape" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" uuid="43b96880-a170-4538-872a-e3cc361e0d11">
+	<property name="net.sf.jasperreports.export.xls.print.page.width" value="842"/>
+	<property name="net.sf.jasperreports.export.xls.print.page.height" value="595"/>
+	<style name="DefaultStyle" isDefault="true" vTextAlign="Middle" fontName="lsf.TimesNewRoman" fontSize="10">
+		<box>
+			<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+		</box>
+		<paragraph leftIndent="2" rightIndent="2"/>
+	</style>
+	<style name="GroupCellStyle2" vTextAlign="Middle" fontName="lsf.TimesNewRoman" fontSize="10">
+		<box>
+			<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+		</box>
+		<paragraph leftIndent="2" rightIndent="2"/>
+	</style>
+	<style name="GroupCellStyle1" mode="Opaque" backcolor="#DFDFDF" vTextAlign="Middle" fontName="lsf.TimesNewRoman" fontSize="10">
+		<box>
+			<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+		</box>
+		<paragraph leftIndent="2" rightIndent="2"/>
+	</style>
+	<style name="GroupCellStyle0" vTextAlign="Middle" fontName="lsf.TimesNewRoman" fontSize="10">
+		<box>
+			<pen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+		</box>
+		<paragraph leftIndent="2" rightIndent="2"/>
+	</style>
+	<field name="game.object" class="java.lang.Long"/>
+	<field name="match(game)" class="java.lang.String"/>
+	<field name="hostGoals(game)" class="java.lang.Integer"/>
+	<field name="guestGoals(game)" class="java.lang.Integer"/>
+	<field name="goal.object" class="java.lang.Long"/>
+	<field name="goalAuthorName(goal)" class="java.lang.String"/>
+	<field name="goalPeriod(goal)" class="java.lang.String"/>
+	<field name="goalTime(goal)" class="java.time.LocalTime"/>
+	<field name="goalTeamName(goal)" class="java.lang.String"/>
+	<field name="goalType(goal)" class="java.lang.String"/>
+	<group name="designGroup2629">
+		<groupExpression><![CDATA[String.valueOf($F{game.object})]]></groupExpression>
+		<groupHeader>
+			<band height="18" splitType="Prevent">
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+					<reportElement style="GroupCellStyle1" stretchType="RelativeToBandHeight" x="0" y="0" width="32" height="18" uuid="5d6fd191-90ae-4f47-9654-9e9fcaf505e1"/>
+					<textElement textAlignment="Center"/>
+					<textFieldExpression><![CDATA["Матч"]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+					<reportElement style="GroupCellStyle1" positionType="Float" stretchType="RelativeToBandHeight" x="32" y="0" width="439" height="18" uuid="7e02ba6c-5dbf-4c2a-accb-4e1ed3f52401"/>
+					<textElement textAlignment="Left"/>
+					<textFieldExpression><![CDATA[$F{match(game)}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+					<reportElement style="GroupCellStyle1" stretchType="RelativeToBandHeight" x="471" y="0" width="48" height="18" uuid="d7e7cf59-e838-4189-9721-1064865e189f"/>
+					<textElement textAlignment="Center"/>
+					<textFieldExpression><![CDATA["X голы"]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+					<reportElement style="GroupCellStyle1" positionType="Float" stretchType="RelativeToBandHeight" x="519" y="0" width="117" height="18" uuid="40438bd2-1304-408a-bcc9-7764fbdecabd"/>
+					<textElement textAlignment="Right"/>
+					<textFieldExpression><![CDATA[$F{hostGoals(game)}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+					<reportElement style="GroupCellStyle1" stretchType="RelativeToBandHeight" x="636" y="0" width="48" height="18" uuid="23c24596-460a-4b2c-b18e-af043b99463b"/>
+					<textElement textAlignment="Center"/>
+					<textFieldExpression><![CDATA["Г голы"]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+					<reportElement style="GroupCellStyle1" positionType="Float" stretchType="RelativeToBandHeight" x="684" y="0" width="118" height="18" uuid="8e9412e4-1024-43a9-97df-1a78d1e217e9"/>
+					<textElement textAlignment="Right"/>
+					<textFieldExpression><![CDATA[$F{guestGoals(game)}]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+	</group>
+	<pageHeader>
+		<band height="18">
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" stretchType="RelativeToBandHeight" x="0" y="0" width="304" height="18" uuid="e79a8129-b2fe-4dec-acb4-180f98365673"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA["Автор Гола"]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" stretchType="RelativeToBandHeight" x="304" y="0" width="333" height="18" uuid="490261ed-cb8e-4fb0-948f-e01016125ec8"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA["Период"]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" stretchType="RelativeToBandHeight" x="637" y="0" width="50" height="18" uuid="c738c6a9-eea0-41e9-ae8b-c9a54a2f38a6"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA["Вермя гола"]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" stretchType="RelativeToBandHeight" x="687" y="0" width="83" height="18" uuid="a610e447-7e67-4086-8c9f-e74716980227"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA["Забившая команда"]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" stretchType="RelativeToBandHeight" x="770" y="0" width="32" height="18" uuid="e30ccf99-4740-4d62-94ff-6cb536a7371b"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA["Кто забил"]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<detail>
+		<band height="18">
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" positionType="Float" stretchType="RelativeToBandHeight" x="0" y="0" width="304" height="18" uuid="330fe4b5-0b09-4e32-8657-a99f24588548"/>
+				<textElement textAlignment="Left"/>
+				<textFieldExpression><![CDATA[$F{goalAuthorName(goal)}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" positionType="Float" stretchType="RelativeToBandHeight" x="304" y="0" width="333" height="18" uuid="8068bd00-6dd5-4b06-b5f2-ed9dc778d314"/>
+				<textElement textAlignment="Left"/>
+				<textFieldExpression><![CDATA[$F{goalPeriod(goal)}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" positionType="Float" stretchType="RelativeToBandHeight" x="637" y="0" width="50" height="18" uuid="2f319b56-f1d9-4643-a6a7-64aeb0f7738a"/>
+				<textElement textAlignment="Left"/>
+				<textFieldExpression><![CDATA[$F{goalTime(goal)}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" positionType="Float" stretchType="RelativeToBandHeight" x="687" y="0" width="83" height="18" uuid="8920ea82-ead9-4773-a90c-2748e977677b"/>
+				<textElement textAlignment="Left"/>
+				<textFieldExpression><![CDATA[$F{goalTeamName(goal)}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement style="GroupCellStyle0" positionType="Float" stretchType="RelativeToBandHeight" x="770" y="0" width="32" height="18" uuid="e23a3ee0-8905-4b10-b735-de79b84aa2f4"/>
+				<textElement textAlignment="Left"/>
+				<textFieldExpression><![CDATA[$F{goalType(goal)}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

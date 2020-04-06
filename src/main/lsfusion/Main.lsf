@@ -1,7 +1,7 @@
 MODULE HockeyStats;
 // описание логики : https://documentation.lsfusion.org/pages/viewpage.action?pageId=2228240
 REQUIRE MasterData, System;
-
+NAMESPACE HockeyStats;
 CLASS Team 'Команда';
 
 name 'Название команды' = DATA STRING[30] (Team) IN base NONULL ;
@@ -19,11 +19,22 @@ lastname 'Фамилия' = DATA STRING[30] (Player) IN base NONULL ;
 CONSTRAINT NOT lastname (Player l) AND l IS Player MESSAGE 'Фамилия игрока должна быть заполнена';
 playerTeam =  DATA Team (Player) NONULL ;
 playerIndex 'Номер' (Player p) = PARTITION SUM 1 IF p IS Player ORDER p CHARWIDTH 6 NOFLEX ;
-playerTeamName 'Команда игрока'(Player player) = name(playerTeam(player)); //Cсылка на команду для игрока
+playerTeamName 'Команда игрока'(Player player) = name(playerTeam(player)) IN base; //Cсылка на команду для игрока
 fio 'ФИО'(Player p) = CONCAT ' ', firstname(p), middlename(p), lastname(p); //Объединение фамилии имени и отчества
 playerTeamNumber 'Номер игрока в команде' (Player p)= DATA INTEGER (Player) IN base NONULL;
 CONSTRAINT playerTeamNumber (Player p) > 21 MESSAGE 'В команде бывает до 21 игрока';
 
+FORM playerList 'Игрок'
+    OBJECTS player = Player
+    PROPERTIES (player) playerIndex, fio, playerTeamName, playerTeamNumber
+    LIST Player OBJECT player
+;
+DESIGN playerList {
+    NEW playerListDesign{
+    REMOVE TOOLBARSYSTEM (player);
+    
+    }
+}
 
 CLASS Game 'Игра';
 
@@ -36,34 +47,39 @@ match 'Матч' (Game game) = CONCAT '<>', hostTeamName(game), guestTeamName(ga
 
 CONSTRAINT hostTeam(Game team) = guestTeam(team) CHECKED BY hostTeam, guestTeam MESSAGE 'Хозяйская и гостевая команды должны быть разными';
 
-
-
-hostGoals 'Х голы' = DATA INTEGER (Game);
-guestGoals 'Г голы' = DATA INTEGER (Game);
-
-CONSTRAINT hostGoals(Game game) = guestGoals(game) MESSAGE 'Игра не может закончиться вничью';
-
 CLASS Goal 'Голы';
 goalAuthor = DATA Player(Goal);
 goalAuthorName 'Автор Гола' (Goal goal) = fio(goalAuthor(goal)) NONULL ;
-goalTime 'Вермя гола' = DATA TIME (Goal) IN base NONULL;
-CONSTRAINT goalTime (Goal goal) > 00:20 OR goalTime(goal) < 00:00 MESSAGE 'Период длится 20 минут';
+goalTime 'Время' = DATA TIME (Goal) IN base NONULL;
+CONSTRAINT goalTime(Goal goal) < 00:00 MESSAGE 'Время не может быть отрицательным';
 goalMatch = DATA Game(Goal);
 goalMatchName 'Матч' (Goal game) = match(goalMatch(game)) NONULL ;
-goalPeriod = DATA Period(Goal);
-goalPeriodName 'Период' (Goal period) = staticCaption(goalPeriod(period)) NONULL ;
+goalPeriod 'Период'= CASE EXCLUSIVE 
+    WHEN goalTime(Goal goal) <= 00:20 THEN '1'
+    WHEN goalTime(goal) > 00:20 AND goalTime (goal) <= 00:40 THEN '2'
+    WHEN goalTime(goal) > 00:40 AND goalTime(goal) <= 01:00 THEN '3'
+    WHEN goalTime(goal) > 01:00 AND goalTime(goal) <= 01:20 THEN 'Овертайм'
+    WHEN goalTime(goal) > 01:20 THEN 'Буллит'
+    ;
+goalOvertime 'ОВ' (Game game) = GROUP  SUM 1 IF goalPeriod(Goal goal) = 'Овертайм' BY goalMatch(goal);
+goalBullit 'Буллит' (Game game) = GROUP SUM 1 IF goalPeriod(Goal goal) = 'Буллит' BY goalMatch(goal);
 
-CONSTRAINT playerTeam(goalAuthor(Goal game)) != hostTeam(goalMatch(game)) CHECKED BY hostTeam, guestTeam MESSAGE 'Игрок не играл в этом матче';
-
-CLASS Period 'Период'{
-    first '1',
-    second '2',
-    third '3',
-    overtime 'Овертайм',
-    bullet 'Буллит'
-}
+//goalPeriod = DATA Period(G1:19:00oal);
+//goalPeriodName 'Период' (Goal period) = staticCaption(goalPeriod(period)) NONULL ;
+CONSTRAINT playerTeam(goalAuthor(Goal game)) != hostTeam(goalMatch(game)) AND playerTeam(goalAuthor(game)) != guestTeam(goalMatch(game)) CHECKED BY hostTeam, guestTeam MESSAGE 'Игрок не играл в этом матче';
+goalTeam = playerTeam(goalAuthor(Goal goal));
+goalTeamName 'Забившая команда' = name(playerTeam(goalAuthor(Goal goal)));
+goalType 'Кто забил' (Goal goal) = IF goalTeam(goal) = hostTeam(goalMatch(goal)) THEN 'Хозяева' ELSE 'Гости';
 
 goalQuantity 'Забитые голы'(Player p) = GROUP SUM 1 BY goalAuthor(Goal goal);
+
+//hostGoals 'Х голы' = DATA INTEGER (Game);
+goalHostGoals 'Х' = GROUP SUM 1 IF playerTeam(goalAuthor(Goal goal)) = hostTeam(goalMatch(goal)) BY playerTeam(goalAuthor(goal));
+hostGoals 'X голы' = GROUP SUM 1 IF goalHostGoals(playerTeam(goalAuthor(Goal goal))) BY goalMatch(goal);
+//guestGoals 'Г голы' = DATA INTEGER (Game);
+goalGuestGoals 'X' = GROUP SUM 1 IF playerTeam(goalAuthor(Goal goal)) = guestTeam(goalMatch(goal)) BY playerTeam(goalAuthor(goal));
+guestGoals 'Г голы' = GROUP SUM 1 IF goalGuestGoals(playerTeam(goalAuthor(Goal goal)))  BY goalMatch(goal);
+CONSTRAINT hostGoals(Game game) = guestGoals(game) MESSAGE 'Игра не может закончиться вничью';
 
 winner(Game game) = IF hostGoals(game) > guestGoals(game)
                     THEN hostTeam(game)
@@ -81,16 +97,21 @@ CLASS GameResult 'Р/И' {
 
 resultName 'Имя' (GameResult game) = staticCaption(game) IF game IS GameResult IN base;
 
-userResult = DATA GameResult (Game);
-result (Game game) = OVERRIDE userResult(game), 
-    (GameResult.win IF ((hostGoals(game) (-) guestGoals(game)) > 1 OR (guestGoals(game) (-) hostGoals(game)) > 1));
+//userResult = DATA GameResult (Game);
+//userResult = CASE
+result (Game match) = CASE 
+   WHEN goalOvertime (match) > 0 THEN GameResult.winOT
+   WHEN goalBullit(match)  > 0 THEN GameResult.winSO
+   WHEN goalBullit(match) = 0 AND goalOvertime(match) = 0 THEN GameResult.win
+   ;
+//result (Game game) = OVERRIDE userResult(game), (GameResult.win IF ((hostGoals(game) (-) guestGoals(game)) > 1 OR (guestGoals(game) (-) hostGoals(game)) > 1));
+
+
 resultName 'Р/И' (Game game) = resultName(result(game));
 
-CONSTRAINT ((hostGoals(Game game) (-) guestGoals(game)) > 1 OR (hostGoals(game) (-) guestGoals(game)) < -1) AND userResult(game) 
-    MESSAGE 'Результат игры определен автоматически';
+//CONSTRAINT ((hostGoals(Game game) (-) guestGoals(game)) > 1 OR (hostGoals(game) (-) guestGoals(game)) < -1) AND userResult(game)  MESSAGE 'Результат игры определен автоматически';
 
-CONSTRAINT ((hostGoals(Game game) (-) guestGoals(game)) < 2 AND (hostGoals(game) (-) guestGoals(game)) > -2) AND NOT userResult(game) 
-    MESSAGE 'Укажите результат игры';
+//CONSTRAINT ((hostGoals(Game game) (-) guestGoals(game)) < 2 AND (hostGoals(game) (-) guestGoals(game)) > -2) AND NOT userResult(game)     MESSAGE 'Укажите результат игры';
 
 hostGamesPlayed = GROUP SUM 1 BY hostTeam(Game game);
 guestGamesPlayed = GROUP SUM 1 BY guestTeam(Game game);
@@ -131,6 +152,10 @@ EXTEND FORM MainForm
     PROPERTIES(team) place, name, gamesPlayed, gamesWon, gamesWonOT, gamesWonSO,
                      gamesLostSO, gamesLostOT, gamesLost, goalsScored, goalsConceded, points, NEW, DELETE
     ORDER place(team)
+    
+    OBJECTS goal = Goal
+    PROPERTIES (goal) goalAuthorName, goalMatchName, goalPeriod, goalTime, NEW, DELETE
+    ORDER goalTime(goal)
 ;
 
 FORM MainFormSingle 'Турнирная таблица'
@@ -141,6 +166,11 @@ FORM MainFormSingle 'Турнирная таблица'
     PROPERTIES(team) place, name, gamesPlayed, gamesWon, gamesWonOT, gamesWonSO,
                      gamesLostSO, gamesLostOT, gamesLost, goalsScored, goalsConceded, points, NEW, DELETE
     ORDER place(team)
+    
+    OBJECTS goal = Goal 
+    PROPERTIES (goal) goalAuthorName, goalMatchName, goalPeriod, goalTime, NEW, DELETE
+    ORDER goalTime(goal)
+    FILTERS goalMatch(goal)
 ;
 
 FORM Teams 'Команды'
@@ -196,51 +226,79 @@ FORM Players 'Игроки'
     ORDER playerIndex(player)
     
     OBJECTS goal = Goal
-    PROPERTIES (goal) goalMatchName, goalPeriodName, goalTime READONLY 
+    PROPERTIES (goal) goalMatchName, goalPeriod, goalTime READONLY 
     FILTERS goalAuthor(goal) = player
 ;
 FORM GoalsEdit 'Ввод голов'
     OBJECTS goal = Goal PANEL 
-    PROPERTIES (goal) goalAuthorName, goalMatchName, goalPeriodName, goalTime
+    PROPERTIES (goal) goalAuthorName, goalMatchName, goalPeriod, goalTime
     ORDER goalTime(goal)
     EDIT Goal OBJECT goal
+;
+FORM goalList 'Отображение голов'
+    OBJECTS goal = Goal
+    PROPERTIES (goal) goalAuthorName, goalMatchName, goalPeriod, goalTime
+    ORDER goalTime(goal)
     LIST Goal OBJECT goal
 ;
+
 FORM Goals 'Голы'
     OBJECTS game = Game
     PROPERTIES (game) match, hostGoals, guestGoals READONLY 
     
     OBJECTS goal = Goal
-    PROPERTIES (goal) goalAuthorName, goalPeriodName READONLY , goalTime 
-    PROPERTIES (goal) NEWSESSION NEW, EDIT , DELETE 
+    PROPERTIES (goal) goalAuthorName, goalPeriod, goalTime, goalTeamName, goalType READONLY
+    PROPERTIES (goal) NEW, EDIT , DELETE
     ORDER goalTime(goal)
     FILTERS goalMatch(goal) = game
+    
 ;
-FORM Period 'Период'
-    OBJECTS period = Period
-    PROPERTIES (period) staticCaption READONLY
-    ORDER staticCaption(period)
-    EDIT Period OBJECT period
-    LIST Period OBJECT period
+FORM printGoalsDif 'Печать голов отдельно'
+    OBJECTS game = Game
+    OBJECTS team = Team
+    OBJECTS goal = Goal
+    PROPERTIES (team) name
+    PROPERTIES (game) match
+    PROPERTIES (goal) goalAuthorName
 ;
 
-DESIGN Period {
-    NEW PeriodDesign {
-    caption = 'Период';
-    REMOVE TOOLBARSYSTEM (period);
-    REMOVE PROPERTY (formRefresh());
-    REMOVE PROPERTY (formDrop());
-    }
-}
+FORM printGoals 'Печать голов'
+    OBJECTS (g = Game, t = Team, go = Goal)
+    PROPERTIES name(t), match(g), goalAuthorName(go)
+;
+
+actionPrintGoals 'Одна таблица'(){
+    PRINT printGoals;
+    } IMAGE 'print.png';
+
+actionPrintGoalsDif 'Раздельные таблицы'(){
+    PRINT printGoalsDif;
+    } IMAGE 'print.png';
+    
+EXTEND FORM Players 
+    PROPERTIES actionPrintGoalsDif() TOOLBAR DRAW player
+    PROPERTIES actionPrintGoals()
+;
+FORM printTopPlyaers 'Печать бомбардиров'
+    OBJECTS player = Player
+    PROPERTIES (player) playerIndex, fio, goalQuantity, playerTeamName, playerTeamNumber
+    ORDER goalQuantity(player) DESC
+;
+actionPrintTopPlayers 'Печать бомбардиров'(){
+    PRINT printTopPlyaers;
+    } IMAGE 'print.png'; 
+
 FORM TopPlayers 'Бомбардиры'
     OBJECTS player = Player
     PROPERTIES (player) goalQuantity, fio
     ORDER goalQuantity(player) DESC
+    PROPERTIES actionPrintTopPlayers()
     
     OBJECTS goal = Goal
-    PROPERTIES (goal) goalMatchName, goalPeriodName, goalTime
+    PROPERTIES (goal) goalMatchName, goalPeriod, goalTime
     FILTERS goalAuthor(goal) = player
 ;
+
 
 NAVIGATOR {
     masterData{
